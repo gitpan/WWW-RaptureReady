@@ -1,0 +1,10 @@
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         WWW-RaptureReady
+version:      0.1
+version_from: RaptureReady.pm
+installdirs:  site
+requires:
+    LWP::UserAgent:                0
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.12
