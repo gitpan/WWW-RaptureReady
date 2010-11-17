@@ -1,10 +1,15 @@
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         WWW-RaptureReady
-version:      0.1
-version_from: RaptureReady.pm
-installdirs:  site
-requires:
+--- #YAML:1.0
+name:                WWW-RaptureReady
+version:             0.2
+abstract:            Interface to Rapture Ready's Rapture Index
+license:             perl
+author:              
+    - blair christensen <blair.christensen@gmail.com>
+generated_by:        ExtUtils::MakeMaker version 6.42
+distribution_type:   module
+requires:     
     LWP::UserAgent:                0
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.12
+    Test::More:                    0
+meta-spec:
+    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
+    version: 1.3

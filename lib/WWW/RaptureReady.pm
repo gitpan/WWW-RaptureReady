@@ -1,8 +1,5 @@
 package WWW::RaptureReady;
 
-#
-# $Id: RaptureReady.pm,v 1.1 2005/01/22 05:58:48 blair Exp $
-#
 
 use 5.006001;
 use strict;
@@ -10,17 +7,99 @@ use warnings;
 use Carp            ();
 use LWP::UserAgent  ();
 
+
+our $VERSION = '0.2';
+
+
+sub new {
+  my ($class, @args) = @_;
+  my $self = bless {}, ref($class) || $class;
+  # Default location of the Rapture Index
+  $self->{url}  = 'http://www.raptureready.com/rap2.html';
+  $self->{ua}   = LWP::UserAgent->new;
+  $self->{ua}->agent('WWW::RaptureReady/' . $VERSION);
+  $self->{ua}->from('blair.christensen@gmail.com');
+  return $self;
+}
+
+sub url {
+  my ($self, $url) = @_;
+  if (defined $url) {
+    if ( $url =~ m{^(?:file|https?):} ) {
+      $self->{url} = $url;
+    } else {
+      $self->{url} = 'file:' . $url;
+    }
+  }
+  return $self->{url};
+}
+
+sub fetch {
+  my $self = shift;
+  my $rv  = undef;
+  my $res = $self->{ua}->get($self->{url});
+  if ($res->is_success) {
+    # Fetch and cache the Rapture Index HTML
+    $self->{content} = $res->content;
+    $rv = 1;
+  } else {
+    Carp::carp($res->status_line);
+  }
+  return $rv;
+}
+
+sub index {
+  my $self = shift;
+  my $rv = undef;
+  if ($self->{content} or $self->fetch) {
+    # TODO Make this less fragile
+    if ( $self->{content} =~ />&nbsp;Rapture Index (\d+)</ ) {
+      $rv = $1;
+    }
+  }
+  return $rv;
+}
+
+sub change {
+  my $self = shift;
+  my $rv = undef;
+  if ($self->{content} or $self->fetch) {
+    # TODO Make this less fragile
+    if ( $self->{content} =~ /Net Change.+?\s+(.+?)</ ) {
+      $rv = ( $1 eq 'unch' ? 0 : $1 );
+    }
+  }
+  return $rv;
+}
+
+sub updated {
+  my $self  = shift;
+  my $rv    = undef;
+  if ($self->{content} or $self->fetch) {
+    # TODO Make this less fragile
+    if ( $self->{content} =~ /Updated(.+)?<\/p>/ ) {
+      $rv = $1;
+      # Sigh...
+      $rv =~ s/&nbsp;//g;
+      $rv =~ s/<.+?>//g;
+    }
+  }
+  return $rv;
+}
+
+1; # End of WWW::RaptureReady
+
+
+__END__
+
+
 =head1 NAME
 
 WWW::RaptureReady - Interface to Rapture Ready's Rapture Index
 
 =head1 VERSION
 
-This document describes WWW::RaptureReady version 0.1.
-
-=cut
-
-our $VERSION = '0.1';
+This document describes WWW::RaptureReady version 0.2.
 
 =head1 SYNOPSIS
 
@@ -54,26 +133,13 @@ I<Rapture Index>.  I<Rapture Ready>'s description of the index:
 The rapture index is the "prophetic speedometer
 of end-time activity".
 
-=head1 INTERFACE
+=head1 SUBROUTINES/METHODS
 
 =head2 new()
 
 Creates and returns a new WWW::RaptureReady object.
 
   my $rr = WWW::RaptureReady->new
-
-=cut
-
-sub new {
-  my ($class, @args) = @_; 
-  my $self = bless {}, ref($class) || $class; 
-  # Default location of the Rapture Index
-  $self->{url}  = "http://www.raptureready.com/rap2.html";
-  $self->{ua}   = LWP::UserAgent->new;
-  $self->{ua}->agent('WWW::RaptureReady/' . $VERSION);
-  $self->{ua}->from('blair@devclue.com'); 
-  return $self; 
-}
 
 =head2 url()
 
@@ -87,27 +153,11 @@ Sets the URL to be used for retrieving the I<Rapture Index>.
 
   $rr->url("http://example.com/rapture.html")
 
-=cut
-
-sub url {
-  my ($self, $url) = @_;
-  if (defined $url) {
-    if ($url =~ m%^(?:file|https?):%) {
-      $self->{url} = $url;
-    } else {
-      $self->{url} = 'file:' . $url;
-    }
-  }
-  return $self->{url};
-}
-
 =head2 fetch()
 
 Fetches the I<Rapture Index> HTML from the configured URL.
 
   $rr->fetch
-
-=cut
 
 sub fetch {
   my $self = shift;
@@ -118,7 +168,7 @@ sub fetch {
     $self->{content} = $res->content;
     $rv = 1;
   } else {
-    Carp::carp($res->status_line);    
+    Carp::carp($res->status_line);
   }
   return $rv;
 }
@@ -130,28 +180,12 @@ retrieved.
 
   my $index = $rr->index
 
-=cut
-
-sub index {
-  my $self = shift;
-  my $rv = undef;
-  if ($self->{content} or $self->fetch) {
-    # TODO Make this less fragile
-    if ($self->{content} =~ />Rapture Index\s+(\d+)\s*?/) {
-      $rv = $1;
-    }
-  }
-  return $rv;
-}
-
 =head2 change()
 
 Returns the change in the index.  Calls I<fetch()> if index not already
 retrieved.
 
   my $change = $rr->change
-
-=cut
 
 sub change {
   my $self = shift;
@@ -172,33 +206,71 @@ already retrieved.
 
   my $updated = $rr->updated
 
-=cut
-
-sub updated {
-  my $self = shift;
-  my $rv = undef;
-  if ($self->{content} or $self->fetch) {
-    # TODO Make this less fragile
-    if ($self->{content} =~ />Updated (\w+\s+\d+,\s+\d+)/) {
-      $rv = $1;
-    }
-  }
-  return $rv;
-}
-
 =head1 SEE ALSO
 
 L<Perl>, L<LWP::UserAgent>, L<http://www.raptureready.com/rap2.html>
 
+=head1 CONFIGURATION AND ENVIRONMENT
+
+n/a
+
+=head1 DIAGNOSTICS
+
+n/a
+
+=head1 INCOMPATIBILITIES
+
+n/a
+
+=head1 DEPENDENCIES
+
+n/a
+
+=head1 BUGS AND LIMITATIONS
+
+Please report any bugs or feature requests to C<bug-www-raptureready at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=WWW-RaptureReady>.  I will be
+notified, and then you'll automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc WWW::RaptureReady
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=WWW-RaptureReady>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/WWW-RaptureReady>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/WWW-RaptureReady>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/WWW-RaptureReady/>
+
+=back
+
+=head1 ACKNOWLEDGEMENTS
+
+n/a
+
 =head1 AUTHOR
 
-blair christensen., E<lt>blair@devclue.comE<gt>
+blair christensen., E<lt>blair.christensen@gmail.comE<gt>
 
-<http://devclue.com/blog/code/WWW::RaptureReady/>
+=head1 LICENSE AND COPYRIGHT
 
-=head1 COPYRIGHT AND LICENSE
-
-Copyright 2005 by blair christensen.
+Copyright 2009 by blair christensen.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
@@ -228,4 +300,3 @@ OF SUCH DAMAGES.
 
 =cut
 
-1;
